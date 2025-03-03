@@ -208,6 +208,16 @@ def _parse_model(output):
                 value = from_smtlib_string(str(value))
             elif typ == 'Int':
                 value = from_stmlib_int(value)
+            elif typ == 'Real':
+                # Handle Real values, including fractions
+                if isinstance(value, list) and len(value) == 3 and value[0].value() == '/':
+                    # It's a fraction like (/ 3223.0 25000.0)
+                    numerator = float(value[1])
+                    denominator = float(value[2])
+                    value = numerator / denominator
+                else:
+                    # It's a simple number
+                    value = float(str(value))
             _model[var_name] = value
 
     return _model
@@ -229,11 +239,13 @@ class MockExpr:
             return self._name
         if self.op == "IntVal":
             return str(self.args[0])
+        elif self.op == "RealVal":
+            return str(self.args[0])
         elif self.op == "BoolVal":
             return str(self.args[0]).lower()
         elif self.op == 'str.val':
             return to_smtlib_string(self.args[0])
-        elif self.op in ["Int", "String"]:
+        elif self.op in ["Int", "String", "Real"]:
             # For variable references, just return the name
             return str(self.args[0])
         elif not self.args:
@@ -295,6 +307,35 @@ class MockExpr:
         return self._name if self._name else str(self)
 
 library = {
+'str.sorted':
+"""
+(define-fun-rec str.min_char ((s String)) String
+  (let ((len (str.len s)))
+    (ite (<= len 1)
+         s
+         (let ((first (str.at s 0))
+               (rest_min (str.min_char (str.substr s 1 (- len 1)))))
+           (ite (str.< first rest_min)
+                first
+                rest_min)))))
+
+(define-fun-rec str.remove_first_occurrence ((s String) (c String)) String
+  (let ((len (str.len s)))
+    (ite (= len 0)
+         ""
+         (ite (= (str.at s 0) c)
+              (str.substr s 1 (- len 1))
+              (str.++ (str.substr s 0 1) 
+                     (str.remove_first_occurrence (str.substr s 1 (- len 1)) c))))))
+
+(define-fun-rec str.sorted ((s String)) String
+  (let ((len (str.len s)))
+    (ite (= len 0)
+         ""
+         (let ((min_c (str.min_char s)))
+           (str.++ min_c (str.sorted (str.remove_first_occurrence s min_c)))))))
+"""
+,
 'python.join':
 """
 (declare-datatypes ((List 1)) 
@@ -622,6 +663,14 @@ class Backend():
     def IntVal(self, val: int) -> MockExpr:
         return self._record("IntVal", val)
 
+    def Real(self, name: str) -> MockExpr:
+        if name not in self.quantified_vars:
+            self.solver.declarations.append((name, 'Real'))
+        return self._record("Real", name)
+
+    def RealVal(self, val: float) -> MockExpr:
+        return self._record("RealVal", val)
+
     def BoolVal(self, val: bool) -> MockExpr:
         return self._record("BoolVal", val)
 
@@ -710,6 +759,9 @@ class Backend():
 
     def StrToFloat(self, x) -> MockExpr:
         return self._record("str.to.float", x)
+        
+    def IntToFloat(self, x) -> MockExpr:
+        return self._record("to_real", x)
 
     def StrReplace(self, x, y, z) -> MockExpr:
         return self._record("str.replace", x, y, z)
@@ -747,6 +799,9 @@ class Backend():
 
     def StrReverse(self, s) -> MockExpr:
         return self._record("str.reverse", s)
+
+    def StrSorted(self, s) -> MockExpr:
+        return self._record("str.sorted", s)
 
     def StrCount(self, s, sub) -> MockExpr:
         return self._record("str.count", s, sub)

@@ -58,6 +58,8 @@ class PuzzleSolver:
             typ = int
         elif ans_type == 'str':
             typ = str
+        elif ans_type == 'float':
+            typ = float
         if not typ:
             print("Unsupported answer type", ans_type)
             self.error_unsupported_answer_type += 1
@@ -300,9 +302,10 @@ def call_solvers(llm_solvers, stats, name, callback):
         except Exception as e:
             print("Error with solver:", str(e))
             result = None
-        stats[solver_name].append((name, result))
-        if best is None and result is not None:
-            best = result
+        if solver_name:
+            stats[solver_name].append((name, result))
+            if best is None and result is not None:
+                best = result
     return best
 
 if __name__ == "__main__":
@@ -316,7 +319,7 @@ if __name__ == "__main__":
                         help='only run puzzles whose names start with this prefix')
     parser.add_argument('--answer-types',
                         nargs='+',
-                        choices=['int', 'str'],
+                        choices=['int', 'str', 'float'],
                         default=['int', 'str'],
                         help='only run some answer types')
     parser.add_argument('--smtlib-backends',

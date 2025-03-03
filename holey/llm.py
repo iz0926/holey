@@ -26,6 +26,11 @@ def dummy_generate(pkg, extra=""):
 
 generators = {}
 
+def generate(prompt, max_tokens=1000, temperature=1.0, model=None):
+    print(f"Prompt:\n{prompt}")
+    return None
+generators[None] = generate
+
 if OPENAI_API_KEY:
     generate = None
     try:
@@ -38,7 +43,6 @@ if OPENAI_API_KEY:
             openai.base_url = OPENAI_BASE_URL
         def generate(prompt, max_tokens=1000, temperature=1.0, model="gpt-4o"):
             print(f"Sending request to OpenAI (model={model}, max_tokens={max_tokens}, temp={temperature})")
-            print(f"Prompt:\n{prompt}")
 
             completion = openai.chat.completions.create(
                 model="gpt-4o",
@@ -62,9 +66,8 @@ if ANTHROPIC_API_KEY:
     except ModuleNotFoundError:
         generate = dummy_generate('anthropic')
     if generate is None:
-        def generate(prompt, max_tokens=1000, temperature=1.0, model="claude-3-5-sonnet-20241022"):
+        def generate(prompt, max_tokens=1000, temperature=1.0, model="claude-3-7-sonnet-20250219"):
             print(f"Sending request to Anthropic (model={model}, max_tokens={max_tokens}, temp={temperature})")
-            print(f"Prompt:\n{prompt}")
 
             client = anthropic.Anthropic()
 
@@ -100,7 +103,6 @@ if GEMINI_API_KEY:
     if generate is None:
         def generate(prompt, max_tokens=1000, temperature=1.0, model="gemini-2.0-flash"):
             print(f"Sending request to Google Gemini (model={model}, max_tokens={max_tokens}, temp={temperature})")
-            print(f"Prompt:\n{prompt}")
             
             client = genai.Client(api_key=GEMINI_API_KEY)
 
@@ -121,10 +123,9 @@ if OLLAMA_API_KEY:
     except ModuleNotFoundError:
         generate = dummy_generate('ollama', extra=", or package 'anthropic' while setting ANTHROPIC_API_KEY")
     if generate is None:
-        model = os.environ.get('OLLAMA_MODEL', 'qwen2.5-coder')
+        model = os.environ.get('OLLAMA_MODEL', 'qwen2.5')
         def generate(prompt, max_tokens=1000, temperature=1.0, model=model):
             print(f"Sending request to Ollama (model={model}, max_tokens={max_tokens}, temp={temperature})")
-            print(f"Prompt:\n{prompt}")
 
             try:
                 response = ollama.generate(
@@ -145,6 +146,8 @@ if OLLAMA_API_KEY:
 
 def extract_code_blocks(response: str) -> str:
     """Extract code blocks from LLM response, removing markdown and explanations."""
+    if not response:
+        return []
     if "```" in response:
         lines = response.split("```")[1:]
         lines = [lines[i] for i in range(0, len(lines)) if i % 2 == 0]
