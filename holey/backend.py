@@ -439,6 +439,21 @@ library = {
 (define-fun bin ((x Int)) String
   (str.++ "0b" (bin.rec x 32)))
 """
+,
+'mod_pow':
+"""
+;; Define a function for modular exponentiation
+(define-fun mod_pow ((base Int) (exp Int) (mod Int)) Int
+    (mod (to_int (^ (to_real base) exp)) mod))
+""",
+'power':
+"""
+;; Define a function for power operation
+(define-fun power ((base Int) (exp Int)) Int
+  (ite (>= exp 0)
+       (to_int (^ (to_real base) exp))
+       0))
+"""
 }
 
 @dataclass
@@ -571,8 +586,10 @@ class Backend():
     def Mod(self, a, b) -> MockExpr:
         return self._record("mod", a, b)
 
-    def Pow(self, a, b) -> MockExpr:
-        return self._record("^", a, b)
+    def Pow(self, a, b, mod=None) -> MockExpr:
+        if mod is not None:
+            return self._record("mod_pow", a, b, mod)  # Use mod_pow for modular exponentiation
+        return self._record("power", a, b)
 
     def Solver(self) -> MockSolver:
         return self.solver

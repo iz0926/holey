@@ -295,12 +295,22 @@ class SymbolicInt:
         return SymbolicInt(self.tracer.backend.Mod(other.z3_expr, self.z3_expr), tracer=self.tracer)
 
 
-    def __pow__(self, other):
+    def __pow__(self, other, mod=None):
         other = self.tracer.ensure_symbolic(other)
+
         if isinstance(other, SymbolicFloat):
             return SymbolicFloat(self.tracer.backend.Pow(self.z3_expr, other.z3_expr), tracer=self.tracer)
+
         if self.concrete is not None and other.concrete is not None:
+            if mod is not None:
+                mod = self.tracer.ensure_symbolic(mod)
+                return SymbolicInt(pow(self.concrete, other.concrete, mod.concrete), tracer=self.tracer)
             return SymbolicInt(other.concrete ** self.concrete, tracer=self.tracer)
+
+        if mod is not None:
+            mod = self.tracer.ensure_symbolic(mod)
+            return SymbolicInt(self.tracer.backend.Mod(self.tracer.backend.Pow(self.z3_expr, other.z3_expr), mod.z3_expr), tracer=self.tracer)
+
         return SymbolicInt(self.tracer.backend.Pow(self.z3_expr, other.z3_expr), tracer=self.tracer)
 
     def __rpow__(self, other):

@@ -1,0 +1,46 @@
+Starting with 1715 puzzles...
+Running benchmarks on 1 puzzles...
+Filtered to puzzles starting with '['DiscreteLog:0']'
+Filtered to puzzles of answer types: ['int', 'str']
+
+Solving puzzle 1/1: DiscreteLog:0
+sat_func def sat(n: int, g=44337, p=69337, t=38187):
+    return pow(g, n, p) == t
+modified_func def sat(n: int, g=wrap_int(44337), p=wrap_int(69337), t=wrap_int(38187)):
+    return pow(g, n, p) == t
+### smt2
+(set-logic ALL)
+
+;; Define a function for power operation
+(define-fun power ((base Int) (exp Int)) Int
+  (ite (>= exp 0)
+       (to_int (^ (to_real base) exp))
+       0))
+
+(declare-const x Int)
+(assert (= (mod (power 44337 x) 69337) 38187))
+(check-sat)
+(get-model)
+
+running backend z3
+### output for z3
+unknown
+(error "line 12 column 10: model is not available")
+
+Could not find any solution for puzzle DiscreteLog:0
+Too many constants for extrapolation
+
+## Current status
+
+The symbolic execution alone currently solves:
+- 0% (0 out of 1) of `int` puzzles,
+- 0% (0 out of 1) overall.
+
+with the following errors:
+- 0 timeouts after 3 seconds at staging time (while generating the SMTLIB program)
+- 0 errors at at staging time
+- 0 SMTLIB programs returning `sat` but the original `sat` function failing on synthesized model input,
+- 1 SMTLIB programs returning non-`sat` (e.g. `unsat`, `unknown` or timing out after 2 seconds
+timeouts after staging (while building the SMTLIB program), errors during staging time, the SMTLIB
+- 1714 (out of 1715) puzzles not yet even attempted because their type is not `int` or `str`, such as `float`, `list` (of various specialization), etc.
+
