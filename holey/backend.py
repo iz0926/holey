@@ -8,6 +8,92 @@ import subprocess
 import os
 import sexpdata
 
+def try_llm_guess(self, symbolic_value):
+    """
+    Attempts to use an LLM to infer a likely value for a symbolic value when used as an index.
+    
+    Args:
+        symbolic_value: The symbolic value that needs to be concretized
+        
+    Returns:
+        An integer guess if the LLM can infer one, None otherwise
+    """
+    # Skip if no LLM solver is configured
+    if not hasattr(self, 'llm_solver') or self.llm_solver is None:
+        return None
+
+    if hasattr(self.llm_solver, 'llm_generate'):
+        print(f"Using LLM: {self.llm_solver.llm_generate.__name__ if hasattr(self.llm_solver.llm_generate, '__name__') else 'unknown'}")
+    
+    # Extract relevant context and metadata
+    variable_name = getattr(symbolic_value, 'name', str(symbolic_value))
+    path_conditions = self.path_conditions if hasattr(self, 'path_conditions') else []
+    
+    # Create a standardized context string representation  
+    context_str = ""
+    if path_conditions:
+        context_str = "\n".join([f"- {str(cond)}" for cond in path_conditions])
+    
+    # Build a prompt for the LLM
+    prompt = f"""
+    I need to determine a reasonable integer value for variable `{variable_name}` which is being used as an index in a Python program.
+    
+    Current execution context:
+    {context_str}
+    
+    Based on this context, what is the most likely integer value for `{variable_name}`?
+    Return only a single integer value. If you cannot determine a reasonable value, respond with "UNKNOWN".
+    """
+    
+    # Clean up the prompt (remove extra whitespace)
+    prompt = "\n".join(line.strip() for line in prompt.split("\n")).strip()
+    
+    try:
+        # Use the existing LLM generate function to get a response
+        # Use a lower temperature for more deterministic results
+        response = self.llm_solver.llm_generate(prompt, temperature=0.1)
+        
+        # Clean and parse the response
+        response = response.strip()
+        
+        # Handle the case where the LLM can't determine a value
+        if "UNKNOWN" in response.upper():
+            return None
+            
+        # Extract the first number from the response
+        import re
+        number_match = re.search(r'-?\d+', response)
+        if number_match:
+            guess = int(number_match.group(0))
+            
+            # Verify the guess against constraints if possible
+            if hasattr(self, 'backend') and hasattr(symbolic_value, 'z3_expr'):
+                # Create a test solver to check if the guess is consistent with constraints
+                test_solver = self.backend.Solver()
+                for cond in path_conditions:
+                    test_solver.add(cond)
+                test_solver.add(symbolic_value.z3_expr == guess)
+                
+                if self.backend.is_sat(test_solver.check()):
+                    # Log successful guess
+                    print(f"LLM provided valid guess {guess} for {variable_name}")
+                    return guess
+                else:
+                    # Log inconsistent guess
+                    print(f"LLM guess {guess} for {variable_name} inconsistent with constraints")
+                    return None
+            else:
+                # If we can't verify against constraints, just return the guess
+                print(f"LLM provided guess {guess} for {variable_name} (unverified)")
+                return guess
+                
+        return None
+            
+    except Exception as e:
+        # Handle any errors in the LLM call
+        print(f"Error in LLM guess: {str(e)}")
+        return None
+
 def to_smtlib_string(s):
     return '"' + ''.join(
         ch if ord(ch) < 128 else f"\\u{{{ord(ch):x}}}"

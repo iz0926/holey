@@ -367,8 +367,14 @@ class SymbolicInt:
 
     def __index__(self):
         if self.concrete is not None:
-            return self.concrete
-        raise ValueError("Cannot convert symbolic integer to index")
+            return int(self.concrete)
+        
+        # Instead of failing, try using an LLM to infer a likely index
+        guess = self.tracer.try_llm_guess(self) 
+        if guess is not None:
+            return int(guess)
+        
+        raise TypeError(f"Cannot convert symbolic value {self} to an integer")
 
 class SymbolicFloat:
     def __init__(self, value, tracer=None):
