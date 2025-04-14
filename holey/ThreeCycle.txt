@@ -1,0 +1,778 @@
+Starting with 1715 puzzles...
+Running benchmarks on 5 puzzles...
+Filtered to puzzles starting with '['ThreeCycle']'
+Filtered to puzzles of answer types: ['int', 'str']
+
+Solving puzzle 1/5: ThreeCycle:0
+sat_func def sat(s: str, target="Hello world"):
+
+    def cycle3(trip):
+        return trip if len(trip) != 3 else trip[2] + trip[:2]
+
+    return target == "".join(cycle3(s[i: i + 3]) for i in range(0, len(s), 3))
+modified_func def sat(s: str, target=wrap_str('Hello world')):
+
+    def cycle3(trip):
+        return trip if sym_len(trip) != wrap_int(3) else trip[wrap_int(2)] + trip[:2]
+    return target == wrap_str('').join(sym_generator((cycle3(s[i:i + 3]) for i in sym_range(0, sym_len(s), 3))))
+### smt2
+(set-logic ALL)
+
+(declare-datatypes ((List 1)) 
+    ((par (T) ((cons (head T) (tail (List T))) (nil)))))
+
+;; List utility functions
+(define-fun-rec list.length.int ((l (List Int))) Int
+  (ite (= l (as nil (List Int)))
+       0
+       (+ 1 (list.length.int (tail l)))))
+
+(define-fun-rec list.get.int ((l (List Int)) (idx Int)) Int
+  (ite (= idx 0)
+       (head l)
+       (list.get.int (tail l) (- idx 1))))
+
+(define-fun-rec list.contains.int ((l (List Int)) (val Int)) Bool
+  (ite (= l (as nil (List Int)))
+       false
+       (ite (= (head l) val)
+            true
+            (list.contains.int (tail l) val))))
+
+(define-fun-rec list.index.rec.int ((i Int) (l (List Int)) (val Int)) Int
+  (ite (= l (as nil (List Int)))
+       -1
+       (ite (= (head l) val)
+            i
+            (list.index.rec.int (+ 1 i) (tail l) val))))
+
+(define-fun list.index.int ((l (List Int)) (val Int)) Int
+  (list.index.rec.int 0 l val))
+
+(define-fun-rec list.length.string ((l (List String))) Int
+  (ite (= l (as nil (List String)))
+       0
+       (+ 1 (list.length.string (tail l)))))
+
+(define-fun-rec list.get.string ((l (List String)) (idx Int)) String
+  (ite (= idx 0)
+       (head l)
+       (list.get.string (tail l) (- idx 1))))
+
+(define-fun-rec list.contains.string ((l (List String)) (val String)) Bool
+  (ite (= l (as nil (List String)))
+       false
+       (ite (= (head l) val)
+            true
+            (list.contains.string (tail l) val))))
+
+(define-fun-rec list.sum.int ((l (List Int))) Int
+  (ite (= l (as nil (List Int)))
+       0
+       (+ (head l) (list.sum.int (tail l)))))
+
+(define-fun-rec list.append.int ((l1 (List Int)) (l2 (List Int))) (List Int)
+  (ite (= l1 (as nil (List Int)))
+       l2
+       (cons (head l1) (list.append.int (tail l1) l2))))
+
+(define-fun-rec list.append.string ((l1 (List String)) (l2 (List String))) (List String)
+  (ite (= l1 (as nil (List String)))
+       l2
+       (cons (head l1) (list.append.string (tail l1) l2))))
+
+(define-fun-rec list.map_add.int ((l (List Int)) (val Int)) (List Int)
+  (ite (= l (as nil (List Int)))
+       (as nil (List Int))
+       (cons (+ (head l) val) (list.map_add.int (tail l) val))))
+
+(define-fun-rec list.count.int ((l (List Int)) (val Int)) Int
+  (ite (= l (as nil (List Int)))
+       0
+       (+ (ite (= (head l) val) 1 0)
+          (list.count.int (tail l) val))))
+
+(define-fun-rec list.count.string ((l (List String)) (val String)) Int
+  (ite (= l (as nil (List String)))
+       0
+       (+ (ite (= (head l) val) 1 0)
+          (list.count.string (tail l) val))))
+
+(define-fun-rec list.count.bool ((l (List Bool)) (val Bool)) Int
+  (ite (= l (as nil (List Bool)))
+       0
+       (+ (ite (= (head l) val) 1 0)
+          (list.count.bool (tail l) val))))
+
+(define-fun-rec list.count.real ((l (List Real)) (val Real)) Int
+  (ite (= l (as nil (List Real)))
+       0
+       (+ (ite (= (head l) val) 1 0)
+          (list.count.real (tail l) val))))
+
+
+(define-fun-rec python.join ((lst (List String)) (delim String)) String
+    (ite (= lst (as nil (List String)))
+         ""
+         (ite (= (tail lst) (as nil (List String)))
+              (head lst)
+              (str.++ (head lst) 
+                     delim 
+                     (python.join (tail lst) delim)))))
+
+
+(define-fun python.str.at ((s String) (start Int)) String
+  (let ((start (ite (< start 0) (+ (str.len s) start) start)))
+    (str.substr s start 1)))
+
+
+(define-fun python.str.substr ((s String) (start Int) (end Int)) String
+  (let ((start (ite (< start 0) (+ (str.len s) start) start))
+        (end (ite (< end 0) (+ (str.len s) end) end)))
+    (str.substr s start (- end start))))
+
+(declare-const x String)
+(declare-const k_1 Int)
+(declare-const k_3 Int)
+(assert (forall ((i_0 Int)) (=> (and (and (and (and (>= i_0 0) (< i_0 (str.len x))) (>= k_1 0)) (= i_0 (+ 0 (* k_1 3)))) (< k_1 (div (- (str.len x) 0) 3))) (=> (not (= (str.len (python.str.substr x i_0 (+ i_0 3))) 3)) (= "Hello world" (python.join (cons (python.str.substr x i_0 (+ i_0 3)) (as nil (List String))) ""))))))
+(assert (forall ((i_2 Int)) (=> (and (and (and (and (>= i_2 0) (< i_2 (str.len x))) (>= k_3 0)) (= i_2 (+ 0 (* k_3 3)))) (< k_3 (div (- (str.len x) 0) 3))) (forall ((i_0 Int)) (=> (and (and (and (and (>= i_0 0) (< i_0 (str.len x))) (>= k_1 0)) (= i_0 (+ 0 (* k_1 3)))) (< k_1 (div (- (str.len x) 0) 3))) (=> (not (not (= (str.len (python.str.substr x i_2 (+ i_2 3))) 3))) (= "Hello world" (python.join (cons (str.++ (python.str.at (python.str.substr x i_2 (+ i_2 3)) 2) (python.str.substr (python.str.substr x i_2 (+ i_2 3)) 0 2)) (as nil (List String))) ""))))))))
+(check-sat)
+(get-model)
+
+running backend z3
+### output for z3
+sat
+(
+  (define-fun x () String
+    "D")
+  (define-fun k_1 () Int
+    (- 1))
+  (define-fun k_3 () Int
+    23975)
+)
+
+Found solution D
+WARNING: Solution verification failed for puzzle ThreeCycle:0
+Too many constants for extrapolation
+
+Solving puzzle 2/5: ThreeCycle:1
+sat_func def sat(s: str, target="rugetytextirocuterup"):
+
+    def cycle3(trip):
+        return trip if len(trip) != 3 else trip[2] + trip[:2]
+
+    return target == "".join(cycle3(s[i: i + 3]) for i in range(0, len(s), 3))
+modified_func def sat(s: str, target=wrap_str('rugetytextirocuterup')):
+
+    def cycle3(trip):
+        return trip if sym_len(trip) != wrap_int(3) else trip[wrap_int(2)] + trip[:2]
+    return target == wrap_str('').join(sym_generator((cycle3(s[i:i + 3]) for i in sym_range(0, sym_len(s), 3))))
+### smt2
+(set-logic ALL)
+
+(declare-datatypes ((List 1)) 
+    ((par (T) ((cons (head T) (tail (List T))) (nil)))))
+
+;; List utility functions
+(define-fun-rec list.length.int ((l (List Int))) Int
+  (ite (= l (as nil (List Int)))
+       0
+       (+ 1 (list.length.int (tail l)))))
+
+(define-fun-rec list.get.int ((l (List Int)) (idx Int)) Int
+  (ite (= idx 0)
+       (head l)
+       (list.get.int (tail l) (- idx 1))))
+
+(define-fun-rec list.contains.int ((l (List Int)) (val Int)) Bool
+  (ite (= l (as nil (List Int)))
+       false
+       (ite (= (head l) val)
+            true
+            (list.contains.int (tail l) val))))
+
+(define-fun-rec list.index.rec.int ((i Int) (l (List Int)) (val Int)) Int
+  (ite (= l (as nil (List Int)))
+       -1
+       (ite (= (head l) val)
+            i
+            (list.index.rec.int (+ 1 i) (tail l) val))))
+
+(define-fun list.index.int ((l (List Int)) (val Int)) Int
+  (list.index.rec.int 0 l val))
+
+(define-fun-rec list.length.string ((l (List String))) Int
+  (ite (= l (as nil (List String)))
+       0
+       (+ 1 (list.length.string (tail l)))))
+
+(define-fun-rec list.get.string ((l (List String)) (idx Int)) String
+  (ite (= idx 0)
+       (head l)
+       (list.get.string (tail l) (- idx 1))))
+
+(define-fun-rec list.contains.string ((l (List String)) (val String)) Bool
+  (ite (= l (as nil (List String)))
+       false
+       (ite (= (head l) val)
+            true
+            (list.contains.string (tail l) val))))
+
+(define-fun-rec list.sum.int ((l (List Int))) Int
+  (ite (= l (as nil (List Int)))
+       0
+       (+ (head l) (list.sum.int (tail l)))))
+
+(define-fun-rec list.append.int ((l1 (List Int)) (l2 (List Int))) (List Int)
+  (ite (= l1 (as nil (List Int)))
+       l2
+       (cons (head l1) (list.append.int (tail l1) l2))))
+
+(define-fun-rec list.append.string ((l1 (List String)) (l2 (List String))) (List String)
+  (ite (= l1 (as nil (List String)))
+       l2
+       (cons (head l1) (list.append.string (tail l1) l2))))
+
+(define-fun-rec list.map_add.int ((l (List Int)) (val Int)) (List Int)
+  (ite (= l (as nil (List Int)))
+       (as nil (List Int))
+       (cons (+ (head l) val) (list.map_add.int (tail l) val))))
+
+(define-fun-rec list.count.int ((l (List Int)) (val Int)) Int
+  (ite (= l (as nil (List Int)))
+       0
+       (+ (ite (= (head l) val) 1 0)
+          (list.count.int (tail l) val))))
+
+(define-fun-rec list.count.string ((l (List String)) (val String)) Int
+  (ite (= l (as nil (List String)))
+       0
+       (+ (ite (= (head l) val) 1 0)
+          (list.count.string (tail l) val))))
+
+(define-fun-rec list.count.bool ((l (List Bool)) (val Bool)) Int
+  (ite (= l (as nil (List Bool)))
+       0
+       (+ (ite (= (head l) val) 1 0)
+          (list.count.bool (tail l) val))))
+
+(define-fun-rec list.count.real ((l (List Real)) (val Real)) Int
+  (ite (= l (as nil (List Real)))
+       0
+       (+ (ite (= (head l) val) 1 0)
+          (list.count.real (tail l) val))))
+
+
+(define-fun-rec python.join ((lst (List String)) (delim String)) String
+    (ite (= lst (as nil (List String)))
+         ""
+         (ite (= (tail lst) (as nil (List String)))
+              (head lst)
+              (str.++ (head lst) 
+                     delim 
+                     (python.join (tail lst) delim)))))
+
+
+(define-fun python.str.at ((s String) (start Int)) String
+  (let ((start (ite (< start 0) (+ (str.len s) start) start)))
+    (str.substr s start 1)))
+
+
+(define-fun python.str.substr ((s String) (start Int) (end Int)) String
+  (let ((start (ite (< start 0) (+ (str.len s) start) start))
+        (end (ite (< end 0) (+ (str.len s) end) end)))
+    (str.substr s start (- end start))))
+
+(declare-const x String)
+(declare-const k_1 Int)
+(declare-const k_3 Int)
+(assert (forall ((i_0 Int)) (=> (and (and (and (and (>= i_0 0) (< i_0 (str.len x))) (>= k_1 0)) (= i_0 (+ 0 (* k_1 3)))) (< k_1 (div (- (str.len x) 0) 3))) (=> (not (= (str.len (python.str.substr x i_0 (+ i_0 3))) 3)) (= "rugetytextirocuterup" (python.join (cons (python.str.substr x i_0 (+ i_0 3)) (as nil (List String))) ""))))))
+(assert (forall ((i_2 Int)) (=> (and (and (and (and (>= i_2 0) (< i_2 (str.len x))) (>= k_3 0)) (= i_2 (+ 0 (* k_3 3)))) (< k_3 (div (- (str.len x) 0) 3))) (forall ((i_0 Int)) (=> (and (and (and (and (>= i_0 0) (< i_0 (str.len x))) (>= k_1 0)) (= i_0 (+ 0 (* k_1 3)))) (< k_1 (div (- (str.len x) 0) 3))) (=> (not (not (= (str.len (python.str.substr x i_2 (+ i_2 3))) 3))) (= "rugetytextirocuterup" (python.join (cons (str.++ (python.str.at (python.str.substr x i_2 (+ i_2 3)) 2) (python.str.substr (python.str.substr x i_2 (+ i_2 3)) 0 2)) (as nil (List String))) ""))))))))
+(check-sat)
+(get-model)
+
+running backend z3
+### output for z3
+sat
+(
+  (define-fun x () String
+    "D")
+  (define-fun k_1 () Int
+    0)
+  (define-fun k_3 () Int
+    1)
+)
+
+Found solution D
+WARNING: Solution verification failed for puzzle ThreeCycle:1
+Too many constants for extrapolation
+
+Solving puzzle 3/5: ThreeCycle:2
+sat_func def sat(s: str, target="torusajidapaficiretoh"):
+
+    def cycle3(trip):
+        return trip if len(trip) != 3 else trip[2] + trip[:2]
+
+    return target == "".join(cycle3(s[i: i + 3]) for i in range(0, len(s), 3))
+modified_func def sat(s: str, target=wrap_str('torusajidapaficiretoh')):
+
+    def cycle3(trip):
+        return trip if sym_len(trip) != wrap_int(3) else trip[wrap_int(2)] + trip[:2]
+    return target == wrap_str('').join(sym_generator((cycle3(s[i:i + 3]) for i in sym_range(0, sym_len(s), 3))))
+### smt2
+(set-logic ALL)
+
+(declare-datatypes ((List 1)) 
+    ((par (T) ((cons (head T) (tail (List T))) (nil)))))
+
+;; List utility functions
+(define-fun-rec list.length.int ((l (List Int))) Int
+  (ite (= l (as nil (List Int)))
+       0
+       (+ 1 (list.length.int (tail l)))))
+
+(define-fun-rec list.get.int ((l (List Int)) (idx Int)) Int
+  (ite (= idx 0)
+       (head l)
+       (list.get.int (tail l) (- idx 1))))
+
+(define-fun-rec list.contains.int ((l (List Int)) (val Int)) Bool
+  (ite (= l (as nil (List Int)))
+       false
+       (ite (= (head l) val)
+            true
+            (list.contains.int (tail l) val))))
+
+(define-fun-rec list.index.rec.int ((i Int) (l (List Int)) (val Int)) Int
+  (ite (= l (as nil (List Int)))
+       -1
+       (ite (= (head l) val)
+            i
+            (list.index.rec.int (+ 1 i) (tail l) val))))
+
+(define-fun list.index.int ((l (List Int)) (val Int)) Int
+  (list.index.rec.int 0 l val))
+
+(define-fun-rec list.length.string ((l (List String))) Int
+  (ite (= l (as nil (List String)))
+       0
+       (+ 1 (list.length.string (tail l)))))
+
+(define-fun-rec list.get.string ((l (List String)) (idx Int)) String
+  (ite (= idx 0)
+       (head l)
+       (list.get.string (tail l) (- idx 1))))
+
+(define-fun-rec list.contains.string ((l (List String)) (val String)) Bool
+  (ite (= l (as nil (List String)))
+       false
+       (ite (= (head l) val)
+            true
+            (list.contains.string (tail l) val))))
+
+(define-fun-rec list.sum.int ((l (List Int))) Int
+  (ite (= l (as nil (List Int)))
+       0
+       (+ (head l) (list.sum.int (tail l)))))
+
+(define-fun-rec list.append.int ((l1 (List Int)) (l2 (List Int))) (List Int)
+  (ite (= l1 (as nil (List Int)))
+       l2
+       (cons (head l1) (list.append.int (tail l1) l2))))
+
+(define-fun-rec list.append.string ((l1 (List String)) (l2 (List String))) (List String)
+  (ite (= l1 (as nil (List String)))
+       l2
+       (cons (head l1) (list.append.string (tail l1) l2))))
+
+(define-fun-rec list.map_add.int ((l (List Int)) (val Int)) (List Int)
+  (ite (= l (as nil (List Int)))
+       (as nil (List Int))
+       (cons (+ (head l) val) (list.map_add.int (tail l) val))))
+
+(define-fun-rec list.count.int ((l (List Int)) (val Int)) Int
+  (ite (= l (as nil (List Int)))
+       0
+       (+ (ite (= (head l) val) 1 0)
+          (list.count.int (tail l) val))))
+
+(define-fun-rec list.count.string ((l (List String)) (val String)) Int
+  (ite (= l (as nil (List String)))
+       0
+       (+ (ite (= (head l) val) 1 0)
+          (list.count.string (tail l) val))))
+
+(define-fun-rec list.count.bool ((l (List Bool)) (val Bool)) Int
+  (ite (= l (as nil (List Bool)))
+       0
+       (+ (ite (= (head l) val) 1 0)
+          (list.count.bool (tail l) val))))
+
+(define-fun-rec list.count.real ((l (List Real)) (val Real)) Int
+  (ite (= l (as nil (List Real)))
+       0
+       (+ (ite (= (head l) val) 1 0)
+          (list.count.real (tail l) val))))
+
+
+(define-fun-rec python.join ((lst (List String)) (delim String)) String
+    (ite (= lst (as nil (List String)))
+         ""
+         (ite (= (tail lst) (as nil (List String)))
+              (head lst)
+              (str.++ (head lst) 
+                     delim 
+                     (python.join (tail lst) delim)))))
+
+
+(define-fun python.str.at ((s String) (start Int)) String
+  (let ((start (ite (< start 0) (+ (str.len s) start) start)))
+    (str.substr s start 1)))
+
+
+(define-fun python.str.substr ((s String) (start Int) (end Int)) String
+  (let ((start (ite (< start 0) (+ (str.len s) start) start))
+        (end (ite (< end 0) (+ (str.len s) end) end)))
+    (str.substr s start (- end start))))
+
+(declare-const x String)
+(declare-const k_1 Int)
+(declare-const k_3 Int)
+(assert (forall ((i_0 Int)) (=> (and (and (and (and (>= i_0 0) (< i_0 (str.len x))) (>= k_1 0)) (= i_0 (+ 0 (* k_1 3)))) (< k_1 (div (- (str.len x) 0) 3))) (=> (not (= (str.len (python.str.substr x i_0 (+ i_0 3))) 3)) (= "torusajidapaficiretoh" (python.join (cons (python.str.substr x i_0 (+ i_0 3)) (as nil (List String))) ""))))))
+(assert (forall ((i_2 Int)) (=> (and (and (and (and (>= i_2 0) (< i_2 (str.len x))) (>= k_3 0)) (= i_2 (+ 0 (* k_3 3)))) (< k_3 (div (- (str.len x) 0) 3))) (forall ((i_0 Int)) (=> (and (and (and (and (>= i_0 0) (< i_0 (str.len x))) (>= k_1 0)) (= i_0 (+ 0 (* k_1 3)))) (< k_1 (div (- (str.len x) 0) 3))) (=> (not (not (= (str.len (python.str.substr x i_2 (+ i_2 3))) 3))) (= "torusajidapaficiretoh" (python.join (cons (str.++ (python.str.at (python.str.substr x i_2 (+ i_2 3)) 2) (python.str.substr (python.str.substr x i_2 (+ i_2 3)) 0 2)) (as nil (List String))) ""))))))))
+(check-sat)
+(get-model)
+
+running backend z3
+### output for z3
+sat
+(
+  (define-fun x () String
+    "D")
+  (define-fun k_1 () Int
+    (- 2))
+  (define-fun k_3 () Int
+    5744)
+)
+
+Found solution D
+WARNING: Solution verification failed for puzzle ThreeCycle:2
+Too many constants for extrapolation
+
+Solving puzzle 4/5: ThreeCycle:3
+sat_func def sat(s: str, target="quitextaf"):
+
+    def cycle3(trip):
+        return trip if len(trip) != 3 else trip[2] + trip[:2]
+
+    return target == "".join(cycle3(s[i: i + 3]) for i in range(0, len(s), 3))
+modified_func def sat(s: str, target=wrap_str('quitextaf')):
+
+    def cycle3(trip):
+        return trip if sym_len(trip) != wrap_int(3) else trip[wrap_int(2)] + trip[:2]
+    return target == wrap_str('').join(sym_generator((cycle3(s[i:i + 3]) for i in sym_range(0, sym_len(s), 3))))
+### smt2
+(set-logic ALL)
+
+(declare-datatypes ((List 1)) 
+    ((par (T) ((cons (head T) (tail (List T))) (nil)))))
+
+;; List utility functions
+(define-fun-rec list.length.int ((l (List Int))) Int
+  (ite (= l (as nil (List Int)))
+       0
+       (+ 1 (list.length.int (tail l)))))
+
+(define-fun-rec list.get.int ((l (List Int)) (idx Int)) Int
+  (ite (= idx 0)
+       (head l)
+       (list.get.int (tail l) (- idx 1))))
+
+(define-fun-rec list.contains.int ((l (List Int)) (val Int)) Bool
+  (ite (= l (as nil (List Int)))
+       false
+       (ite (= (head l) val)
+            true
+            (list.contains.int (tail l) val))))
+
+(define-fun-rec list.index.rec.int ((i Int) (l (List Int)) (val Int)) Int
+  (ite (= l (as nil (List Int)))
+       -1
+       (ite (= (head l) val)
+            i
+            (list.index.rec.int (+ 1 i) (tail l) val))))
+
+(define-fun list.index.int ((l (List Int)) (val Int)) Int
+  (list.index.rec.int 0 l val))
+
+(define-fun-rec list.length.string ((l (List String))) Int
+  (ite (= l (as nil (List String)))
+       0
+       (+ 1 (list.length.string (tail l)))))
+
+(define-fun-rec list.get.string ((l (List String)) (idx Int)) String
+  (ite (= idx 0)
+       (head l)
+       (list.get.string (tail l) (- idx 1))))
+
+(define-fun-rec list.contains.string ((l (List String)) (val String)) Bool
+  (ite (= l (as nil (List String)))
+       false
+       (ite (= (head l) val)
+            true
+            (list.contains.string (tail l) val))))
+
+(define-fun-rec list.sum.int ((l (List Int))) Int
+  (ite (= l (as nil (List Int)))
+       0
+       (+ (head l) (list.sum.int (tail l)))))
+
+(define-fun-rec list.append.int ((l1 (List Int)) (l2 (List Int))) (List Int)
+  (ite (= l1 (as nil (List Int)))
+       l2
+       (cons (head l1) (list.append.int (tail l1) l2))))
+
+(define-fun-rec list.append.string ((l1 (List String)) (l2 (List String))) (List String)
+  (ite (= l1 (as nil (List String)))
+       l2
+       (cons (head l1) (list.append.string (tail l1) l2))))
+
+(define-fun-rec list.map_add.int ((l (List Int)) (val Int)) (List Int)
+  (ite (= l (as nil (List Int)))
+       (as nil (List Int))
+       (cons (+ (head l) val) (list.map_add.int (tail l) val))))
+
+(define-fun-rec list.count.int ((l (List Int)) (val Int)) Int
+  (ite (= l (as nil (List Int)))
+       0
+       (+ (ite (= (head l) val) 1 0)
+          (list.count.int (tail l) val))))
+
+(define-fun-rec list.count.string ((l (List String)) (val String)) Int
+  (ite (= l (as nil (List String)))
+       0
+       (+ (ite (= (head l) val) 1 0)
+          (list.count.string (tail l) val))))
+
+(define-fun-rec list.count.bool ((l (List Bool)) (val Bool)) Int
+  (ite (= l (as nil (List Bool)))
+       0
+       (+ (ite (= (head l) val) 1 0)
+          (list.count.bool (tail l) val))))
+
+(define-fun-rec list.count.real ((l (List Real)) (val Real)) Int
+  (ite (= l (as nil (List Real)))
+       0
+       (+ (ite (= (head l) val) 1 0)
+          (list.count.real (tail l) val))))
+
+
+(define-fun-rec python.join ((lst (List String)) (delim String)) String
+    (ite (= lst (as nil (List String)))
+         ""
+         (ite (= (tail lst) (as nil (List String)))
+              (head lst)
+              (str.++ (head lst) 
+                     delim 
+                     (python.join (tail lst) delim)))))
+
+
+(define-fun python.str.at ((s String) (start Int)) String
+  (let ((start (ite (< start 0) (+ (str.len s) start) start)))
+    (str.substr s start 1)))
+
+
+(define-fun python.str.substr ((s String) (start Int) (end Int)) String
+  (let ((start (ite (< start 0) (+ (str.len s) start) start))
+        (end (ite (< end 0) (+ (str.len s) end) end)))
+    (str.substr s start (- end start))))
+
+(declare-const x String)
+(declare-const k_1 Int)
+(declare-const k_3 Int)
+(assert (forall ((i_0 Int)) (=> (and (and (and (and (>= i_0 0) (< i_0 (str.len x))) (>= k_1 0)) (= i_0 (+ 0 (* k_1 3)))) (< k_1 (div (- (str.len x) 0) 3))) (=> (not (= (str.len (python.str.substr x i_0 (+ i_0 3))) 3)) (= "quitextaf" (python.join (cons (python.str.substr x i_0 (+ i_0 3)) (as nil (List String))) ""))))))
+(assert (forall ((i_2 Int)) (=> (and (and (and (and (>= i_2 0) (< i_2 (str.len x))) (>= k_3 0)) (= i_2 (+ 0 (* k_3 3)))) (< k_3 (div (- (str.len x) 0) 3))) (forall ((i_0 Int)) (=> (and (and (and (and (>= i_0 0) (< i_0 (str.len x))) (>= k_1 0)) (= i_0 (+ 0 (* k_1 3)))) (< k_1 (div (- (str.len x) 0) 3))) (=> (not (not (= (str.len (python.str.substr x i_2 (+ i_2 3))) 3))) (= "quitextaf" (python.join (cons (str.++ (python.str.at (python.str.substr x i_2 (+ i_2 3)) 2) (python.str.substr (python.str.substr x i_2 (+ i_2 3)) 0 2)) (as nil (List String))) ""))))))))
+(check-sat)
+(get-model)
+
+running backend z3
+### output for z3
+sat
+(
+  (define-fun x () String
+    "D")
+  (define-fun k_1 () Int
+    (- 1))
+  (define-fun k_3 () Int
+    23975)
+)
+
+Found solution D
+WARNING: Solution verification failed for puzzle ThreeCycle:3
+Too many constants for extrapolation
+
+Solving puzzle 5/5: ThreeCycle:4
+sat_func def sat(s: str, target="thoqui"):
+
+    def cycle3(trip):
+        return trip if len(trip) != 3 else trip[2] + trip[:2]
+
+    return target == "".join(cycle3(s[i: i + 3]) for i in range(0, len(s), 3))
+modified_func def sat(s: str, target=wrap_str('thoqui')):
+
+    def cycle3(trip):
+        return trip if sym_len(trip) != wrap_int(3) else trip[wrap_int(2)] + trip[:2]
+    return target == wrap_str('').join(sym_generator((cycle3(s[i:i + 3]) for i in sym_range(0, sym_len(s), 3))))
+### smt2
+(set-logic ALL)
+
+(declare-datatypes ((List 1)) 
+    ((par (T) ((cons (head T) (tail (List T))) (nil)))))
+
+;; List utility functions
+(define-fun-rec list.length.int ((l (List Int))) Int
+  (ite (= l (as nil (List Int)))
+       0
+       (+ 1 (list.length.int (tail l)))))
+
+(define-fun-rec list.get.int ((l (List Int)) (idx Int)) Int
+  (ite (= idx 0)
+       (head l)
+       (list.get.int (tail l) (- idx 1))))
+
+(define-fun-rec list.contains.int ((l (List Int)) (val Int)) Bool
+  (ite (= l (as nil (List Int)))
+       false
+       (ite (= (head l) val)
+            true
+            (list.contains.int (tail l) val))))
+
+(define-fun-rec list.index.rec.int ((i Int) (l (List Int)) (val Int)) Int
+  (ite (= l (as nil (List Int)))
+       -1
+       (ite (= (head l) val)
+            i
+            (list.index.rec.int (+ 1 i) (tail l) val))))
+
+(define-fun list.index.int ((l (List Int)) (val Int)) Int
+  (list.index.rec.int 0 l val))
+
+(define-fun-rec list.length.string ((l (List String))) Int
+  (ite (= l (as nil (List String)))
+       0
+       (+ 1 (list.length.string (tail l)))))
+
+(define-fun-rec list.get.string ((l (List String)) (idx Int)) String
+  (ite (= idx 0)
+       (head l)
+       (list.get.string (tail l) (- idx 1))))
+
+(define-fun-rec list.contains.string ((l (List String)) (val String)) Bool
+  (ite (= l (as nil (List String)))
+       false
+       (ite (= (head l) val)
+            true
+            (list.contains.string (tail l) val))))
+
+(define-fun-rec list.sum.int ((l (List Int))) Int
+  (ite (= l (as nil (List Int)))
+       0
+       (+ (head l) (list.sum.int (tail l)))))
+
+(define-fun-rec list.append.int ((l1 (List Int)) (l2 (List Int))) (List Int)
+  (ite (= l1 (as nil (List Int)))
+       l2
+       (cons (head l1) (list.append.int (tail l1) l2))))
+
+(define-fun-rec list.append.string ((l1 (List String)) (l2 (List String))) (List String)
+  (ite (= l1 (as nil (List String)))
+       l2
+       (cons (head l1) (list.append.string (tail l1) l2))))
+
+(define-fun-rec list.map_add.int ((l (List Int)) (val Int)) (List Int)
+  (ite (= l (as nil (List Int)))
+       (as nil (List Int))
+       (cons (+ (head l) val) (list.map_add.int (tail l) val))))
+
+(define-fun-rec list.count.int ((l (List Int)) (val Int)) Int
+  (ite (= l (as nil (List Int)))
+       0
+       (+ (ite (= (head l) val) 1 0)
+          (list.count.int (tail l) val))))
+
+(define-fun-rec list.count.string ((l (List String)) (val String)) Int
+  (ite (= l (as nil (List String)))
+       0
+       (+ (ite (= (head l) val) 1 0)
+          (list.count.string (tail l) val))))
+
+(define-fun-rec list.count.bool ((l (List Bool)) (val Bool)) Int
+  (ite (= l (as nil (List Bool)))
+       0
+       (+ (ite (= (head l) val) 1 0)
+          (list.count.bool (tail l) val))))
+
+(define-fun-rec list.count.real ((l (List Real)) (val Real)) Int
+  (ite (= l (as nil (List Real)))
+       0
+       (+ (ite (= (head l) val) 1 0)
+          (list.count.real (tail l) val))))
+
+
+(define-fun-rec python.join ((lst (List String)) (delim String)) String
+    (ite (= lst (as nil (List String)))
+         ""
+         (ite (= (tail lst) (as nil (List String)))
+              (head lst)
+              (str.++ (head lst) 
+                     delim 
+                     (python.join (tail lst) delim)))))
+
+
+(define-fun python.str.at ((s String) (start Int)) String
+  (let ((start (ite (< start 0) (+ (str.len s) start) start)))
+    (str.substr s start 1)))
+
+
+(define-fun python.str.substr ((s String) (start Int) (end Int)) String
+  (let ((start (ite (< start 0) (+ (str.len s) start) start))
+        (end (ite (< end 0) (+ (str.len s) end) end)))
+    (str.substr s start (- end start))))
+
+(declare-const x String)
+(declare-const k_1 Int)
+(declare-const k_3 Int)
+(assert (forall ((i_0 Int)) (=> (and (and (and (and (>= i_0 0) (< i_0 (str.len x))) (>= k_1 0)) (= i_0 (+ 0 (* k_1 3)))) (< k_1 (div (- (str.len x) 0) 3))) (=> (not (= (str.len (python.str.substr x i_0 (+ i_0 3))) 3)) (= "thoqui" (python.join (cons (python.str.substr x i_0 (+ i_0 3)) (as nil (List String))) ""))))))
+(assert (forall ((i_2 Int)) (=> (and (and (and (and (>= i_2 0) (< i_2 (str.len x))) (>= k_3 0)) (= i_2 (+ 0 (* k_3 3)))) (< k_3 (div (- (str.len x) 0) 3))) (forall ((i_0 Int)) (=> (and (and (and (and (>= i_0 0) (< i_0 (str.len x))) (>= k_1 0)) (= i_0 (+ 0 (* k_1 3)))) (< k_1 (div (- (str.len x) 0) 3))) (=> (not (not (= (str.len (python.str.substr x i_2 (+ i_2 3))) 3))) (= "thoqui" (python.join (cons (str.++ (python.str.at (python.str.substr x i_2 (+ i_2 3)) 2) (python.str.substr (python.str.substr x i_2 (+ i_2 3)) 0 2)) (as nil (List String))) ""))))))))
+(check-sat)
+(get-model)
+
+running backend z3
+### output for z3
+sat
+(
+  (define-fun x () String
+    "D")
+  (define-fun k_1 () Int
+    (- 2))
+  (define-fun k_3 () Int
+    23975)
+)
+
+Found solution D
+WARNING: Solution verification failed for puzzle ThreeCycle:4
+Too many constants for extrapolation
+
+## Current status
+
+The symbolic execution alone currently solves:
+- 0% (0 out of 5) of `str` puzzles,
+- 0% (0 out of 5) overall.
+
+with the following errors:
+- 0 timeouts after 3 seconds at staging time (while generating the SMTLIB program)
+- 0 errors at at staging time
+- 5 SMTLIB programs returning `sat` but the original `sat` function failing on synthesized model input,
+- 0 SMTLIB programs returning non-`sat` (e.g. `unsat`, `unknown` or timing out after 2 seconds
+timeouts after staging (while building the SMTLIB program), errors during staging time, the SMTLIB
+- 1710 (out of 1715) puzzles not yet even attempted because their type is not `int` or `str`, such as `float`, `list` (of various specialization), etc.
